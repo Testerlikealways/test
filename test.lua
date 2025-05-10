@@ -1,418 +1,126 @@
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-local Workspace = game:GetService("Workspace")
+local player = game.Players.LocalPlayer
+local userInputService = game:GetService("UserInputService")
 
-local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local holdingW = false
+local teleporting = false
+local screenGui
 
-local Folder = Instance.new("Folder", Workspace)
-local Part = Instance.new("Part", Folder)
-local Attachment1 = Instance.new("Attachment", Part)
-Part.Anchored = true
-Part.CanCollide = false
-Part.Transparency = 1
+-- Setup GUI once
+local function createGui()
+	if screenGui then return end
 
-if not getgenv().Network then
-    getgenv().Network = {
-        BaseParts = {},
-        Velocity = Vector3.new(14.46262424, 14.46262424, 14.46262424)
-    }
+	screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "TeleportGui"
+	screenGui.ResetOnSpawn = false
+	screenGui.Parent = player:WaitForChild("PlayerGui")
 
-    Network.RetainPart = function(Part)
-        if typeof(Part) == "Instance" and Part:IsA("BasePart") and Part:IsDescendantOf(Workspace) then
-            table.insert(Network.BaseParts, Part)
-            Part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
-            Part.CanCollide = false
-        end
-    end
+	local teleportButton = Instance.new("TextButton")
+	teleportButton.Size = UDim2.new(0, 200, 0, 50)
+	teleportButton.Position = UDim2.new(0.5, -100, 0.4, 0)
+	teleportButton.AnchorPoint = Vector2.new(0.5, 0)
+	teleportButton.Text = "Activate Teleport"
+	teleportButton.Parent = screenGui
+	teleportButton.BackgroundColor3 = Color3.fromRGB(50, 150, 250)
+	teleportButton.TextColor3 = Color3.new(1, 1, 1)
+	teleportButton.Font = Enum.Font.SourceSansBold
+	teleportButton.TextSize = 22
 
-    local function EnablePartControl()
-        LocalPlayer.ReplicationFocus = Workspace
-        RunService.Heartbeat:Connect(function()
-            sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge)
-            for _, Part in pairs(Network.BaseParts) do
-                if Part:IsDescendantOf(Workspace) then
-                    Part.Velocity = Network.Velocity
-                end
-            end
-        end)
-    end
+	local removeButton = Instance.new("TextButton")
+	removeButton.Size = UDim2.new(0, 200, 0, 50)
+	removeButton.Position = UDim2.new(0.5, -100, 0.4, 60)
+	removeButton.AnchorPoint = Vector2.new(0.5, 0)
+	removeButton.Text = "Remove GUI"
+	removeButton.Parent = screenGui
+	removeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+	removeButton.TextColor3 = Color3.new(1, 1, 1)
+	removeButton.Font = Enum.Font.SourceSansBold
+	removeButton.TextSize = 22
 
-    EnablePartControl()
+	teleportButton.MouseButton1Click:Connect(teleportThroughDarknessParts)
+	removeButton.MouseButton1Click:Connect(function()
+		screenGui:Destroy()
+		screenGui = nil
+	end)
 end
 
-local function ForcePart(v)
-    if v:IsA("Part") and not v.Anchored and not v.Parent:FindFirstChild("Humanoid") and not v.Parent:FindFirstChild("Head") and v.Name ~= "Handle" then
-        for _, x in next, v:GetChildren() do
-            if x:IsA("BodyAngularVelocity") or x:IsA("BodyForce") or x:IsA("BodyGyro") or x:IsA("BodyPosition") or x:IsA("BodyThrust") or x:IsA("BodyVelocity") or x:IsA("RocketPropulsion") then
-                x:Destroy()
-            end
-        end
-        if v:FindFirstChild("Attachment") then
-            v:FindFirstChild("Attachment"):Destroy()
-        end
-        if v:FindFirstChild("AlignPosition") then
-            v:FindFirstChild("AlignPosition"):Destroy()
-        end
-        if v:FindFirstChild("Torque") then
-            v:FindFirstChild("Torque"):Destroy()
-        end
-        v.CanCollide = false
-        local Torque = Instance.new("Torque", v)
-        Torque.Torque = Vector3.new(100000, 100000, 100000)
-        local AlignPosition = Instance.new("AlignPosition", v)
-        local Attachment2 = Instance.new("Attachment", v)
-        Torque.Attachment0 = Attachment2
-        AlignPosition.MaxForce = 9999999999999999
-        AlignPosition.MaxVelocity = math.huge
-        AlignPosition.Responsiveness = 200
-        AlignPosition.Attachment0 = Attachment2
-        AlignPosition.Attachment1 = Attachment1
-    end
-end
-
-
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local SoundService = game:GetService("SoundService")
-local StarterGui = game:GetService("StarterGui")
-local TextChatService = game:GetService("TextChatService")
-
-local LocalPlayer = Players.LocalPlayer
-
--- Sound Effects
-local function playSound(soundId)
-    local sound = Instance.new("Sound")
-    sound.SoundId = "rbxassetid://" .. soundId
-    sound.Parent = SoundService
-    sound:Play()
-    sound.Ended:Connect(function()
-        sound:Destroy()
-    end)
-end
-
--- Play initial sound
-playSound("2865227271")
-
--- GUI Creation
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SuperRingPartsGUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 190)
-MainFrame.Position = UDim2.new(0.5, -110, 0.5, -95)
-MainFrame.BackgroundColor3 = Color3.fromRGB(204, 0, 0) -- Light brown
-MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
-
--- Make the GUI round
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 20)
-UICorner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Position = UDim2.new(0, 0, 0, 0)
-Title.Text = "Super Ring Parts v4"
-Title.TextColor3 = Color3.fromRGB(153, 0, 0) -- Dark brown
-Title.BackgroundColor3 = Color3.fromRGB(255, 51, 51) -- Lighter brown
-Title.Font = Enum.Font.Fondamento -- More elegant font
-Title.TextSize = 22
-Title.Parent = MainFrame
-
--- Round the title
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 20)
-TitleCorner.Parent = Title
-
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0.8, 0, 0, 35)
-ToggleButton.Position = UDim2.new(0.1, 0, 0.3, 0)
-ToggleButton.Text = "Ring Parts Off"
-ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 255) -- Sienna
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- Cornsilk
-ToggleButton.Font = Enum.Font.Fondamento
-ToggleButton.TextSize = 18
-ToggleButton.Parent = MainFrame
-
--- Round the toggle button
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 10)
-ToggleCorner.Parent = ToggleButton
-
-local DecreaseRadius = Instance.new("TextButton")
-DecreaseRadius.Size = UDim2.new(0.2, 0, 0, 35)
-DecreaseRadius.Position = UDim2.new(0.1, 0, 0.6, 0)
-DecreaseRadius.Text = "<"
-DecreaseRadius.BackgroundColor3 = Color3.fromRGB(255, 153, 153) -- Saddle brown
-DecreaseRadius.TextColor3 = Color3.fromRGB(255, 255, 255) -- Cornsilk
-DecreaseRadius.Font = Enum.Font.Fondamento
-DecreaseRadius.TextSize = 18
-DecreaseRadius.Parent = MainFrame
-
--- Round the decrease button
-local DecreaseCorner = Instance.new("UICorner")
-DecreaseCorner.CornerRadius = UDim.new(0, 10)
-DecreaseCorner.Parent = DecreaseRadius
-
-local IncreaseRadius = Instance.new("TextButton")
-IncreaseRadius.Size = UDim2.new(0.2, 0, 0, 35)
-IncreaseRadius.Position = UDim2.new(0.7, 0, 0.6, 0)
-IncreaseRadius.Text = ">"
-IncreaseRadius.BackgroundColor3 = Color3.fromRGB(255, 153, 153) -- Saddle brown
-IncreaseRadius.TextColor3 = Color3.fromRGB(255, 255, 255) -- Cornsilk
-IncreaseRadius.Font = Enum.Font.Fondamento
-IncreaseRadius.TextSize = 18
-IncreaseRadius.Parent = MainFrame
-
--- Round the increase button
-local IncreaseCorner = Instance.new("UICorner")
-IncreaseCorner.CornerRadius = UDim.new(0, 10)
-IncreaseCorner.Parent = IncreaseRadius
-
-local RadiusDisplay = Instance.new("TextLabel")
-RadiusDisplay.Size = UDim2.new(0.4, 0, 0, 35)
-RadiusDisplay.Position = UDim2.new(0.3, 0, 0.6, 0)
-RadiusDisplay.Text = "Radius: 50"
-RadiusDisplay.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Tan
-RadiusDisplay.TextColor3 = Color3.fromRGB(255, 255, 255) -- Dark brown
-RadiusDisplay.Font = Enum.Font.Fondamento
-RadiusDisplay.TextSize = 18
-RadiusDisplay.Parent = MainFrame
-
--- Round the radius display
-local RadiusCorner = Instance.new("UICorner")
-RadiusCorner.CornerRadius = UDim.new(0, 10)
-RadiusCorner.Parent = RadiusDisplay
-
-local Watermark = Instance.new("TextLabel")
-Watermark.Size = UDim2.new(1, 0, 0, 20)
-Watermark.Position = UDim2.new(0, 0, 1, -20)
-Watermark.Text = "Super Ring [V4] by lukas"
-Watermark.TextColor3 = Color3.fromRGB(255, 255, 255) -- Dark brown
-Watermark.BackgroundTransparency = 1
-Watermark.Font = Enum.Font.Fondamento
-Watermark.TextSize = 14
-Watermark.Parent = MainFrame
-
--- Add minimize button
-local MinimizeButton = Instance.new("TextButton")
-MinimizeButton.Size = UDim2.new(0, 30, 0, 30)
-MinimizeButton.Position = UDim2.new(1, -35, 0, 5)
-MinimizeButton.Text = "-"
-MinimizeButton.BackgroundColor3 = Color3.fromRGB(0, 0, 255) -- Saddle brown
-MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- Cornsilk
-MinimizeButton.Font = Enum.Font.Fondamento
-MinimizeButton.TextSize = 18
-MinimizeButton.Parent = MainFrame
-
--- Round the minimize button
-local MinimizeCorner = Instance.new("UICorner")
-MinimizeCorner.CornerRadius = UDim.new(0, 15)
-MinimizeCorner.Parent = MinimizeButton
-
--- Minimize functionality
-local minimized = false
-MinimizeButton.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    if minimized then
-        MainFrame:TweenSize(UDim2.new(0, 220, 0, 40), "Out", "Quad", 0.3, true)
-        MinimizeButton.Text = "+"
-        ToggleButton.Visible = false
-        DecreaseRadius.Visible = false
-        IncreaseRadius.Visible = false
-        RadiusDisplay.Visible = false
-        Watermark.Visible = false
-    else
-        MainFrame:TweenSize(UDim2.new(0, 220, 0, 190), "Out", "Quad", 0.3, true)
-        MinimizeButton.Text = "-"
-        ToggleButton.Visible = true
-        DecreaseRadius.Visible = true
-        IncreaseRadius.Visible = true
-        RadiusDisplay.Visible = true
-        Watermark.Visible = true
-    end
-    playSound("12221967")
+-- Key input
+userInputService.InputBegan:Connect(function(input, gameProcessed)
+	if not gameProcessed and input.KeyCode == Enum.KeyCode.W then
+		holdingW = true
+	end
 end)
 
--- Make GUI draggable
-local dragging
-local dragInput
-local dragStart
-local startPos
-
-local function update(input)
-    local delta = input.Position - dragStart
-    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
-
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
+userInputService.InputEnded:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.W then
+		holdingW = false
+	end
 end)
 
-MainFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
+-- Core teleport function
+function teleportThroughDarknessParts()
+	if teleporting then return end
+	teleporting = true
 
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        update(input)
-    end
-end)
+	local character = player.Character or player.CharacterAdded:Wait()
+	local hrp = character:WaitForChild("HumanoidRootPart")
 
--- Ring Parts Logic
-if not getgenv().Network then
-    getgenv().Network = {
-        BaseParts = {},
-        Velocity = Vector3.new(14.46262424, 14.46262424, 14.46262424)
-    }
-    Network.RetainPart = function(Part)
-        if typeof(Part) == "Instance" and Part:IsA("BasePart") and Part:IsDescendantOf(workspace) then
-            table.insert(Network.BaseParts, Part)
-            Part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
-            Part.CanCollide = false
-        end
-    end
-    local function EnablePartControl()
-        LocalPlayer.ReplicationFocus = workspace
-        RunService.Heartbeat:Connect(function()
-            sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge)
-            for _, Part in pairs(Network.BaseParts) do
-                if Part:IsDescendantOf(workspace) then
-                    Part.Velocity = Network.Velocity
-                end
-            end
-        end)
-    end
-    EnablePartControl()
+	local shutdownText
+	local success = pcall(function()
+		shutdownText = workspace:WaitForChild("DelayShutDown"):WaitForChild("ShutdownText")
+	end)
+
+	if not success or not shutdownText or not shutdownText:IsA("StringValue") then
+		warn("DelayShutDown.ShutdownText (StringValue) not found.")
+		teleporting = false
+		return
+	end
+
+	-- Gather DarknessParts
+	local parts = {}
+	for _, model in ipairs(workspace:GetChildren()) do
+		if model:IsA("Model") then
+			for _, desc in ipairs(model:GetDescendants()) do
+				if desc:IsA("BasePart") and desc.Name == "DarknessPart" then
+					table.insert(parts, desc)
+				end
+			end
+		end
+	end
+
+	-- Teleport to all DarknessParts
+	for i, part in ipairs(parts) do
+		if not holdingW then
+			shutdownText.Value = "Teleport stopped. Hold W to continue."
+			teleporting = false
+			return
+		end
+
+		hrp.CFrame = part.CFrame + Vector3.new(0, 3, 0)
+		shutdownText.Value = "Teleporting to DarknessPart " .. i .. " / " .. #parts
+		task.wait(0.5) -- slower teleportation
+	end
+
+	-- Final teleport to TheEnd → GoldenChest → Trigger (Above Trigger)
+	local finalTarget
+	local ok = pcall(function()
+		finalTarget = workspace:WaitForChild("BoatStages"):WaitForChild("NormalStages"):WaitForChild("TheEnd"):WaitForChild("GoldenChest"):WaitForChild("Trigger")
+	end)
+
+	if ok and finalTarget and finalTarget:IsA("BasePart") then
+		hrp.CFrame = finalTarget.CFrame + Vector3.new(0, 10, 0) -- Teleport above the Trigger part
+		shutdownText.Value = "Final teleport complete."
+	else
+		shutdownText.Value = "Final target (Trigger) not found."
+	end
+
+	teleporting = false
 end
 
-local radius = 50
-local height = 100
-local rotationSpeed = 1
-local attractionStrength = 1000
-local ringPartsEnabled = false
-
-local function RetainPart(Part)
-    if Part:IsA("BasePart") and not Part.Anchored and Part:IsDescendantOf(workspace) then
-        if Part.Parent == LocalPlayer.Character or Part:IsDescendantOf(LocalPlayer.Character) then
-            return false
-        end
-
-        Part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
-        Part.CanCollide = false
-        return true
-    end
-    return false
-end
-
-local parts = {}
-local function addPart(part)
-    if RetainPart(part) then
-        if not table.find(parts, part) then
-            table.insert(parts, part)
-        end
-    end
-end
-
-local function removePart(part)
-    local index = table.find(parts, part)
-    if index then
-        table.remove(parts, index)
-    end
-end
-
-for _, part in pairs(workspace:GetDescendants()) do
-    addPart(part)
-end
-
-workspace.DescendantAdded:Connect(addPart)
-workspace.DescendantRemoving:Connect(removePart)
-
-RunService.Heartbeat:Connect(function()
-    if not ringPartsEnabled then return end
-    
-    local humanoidRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if humanoidRootPart then
-        local tornadoCenter = humanoidRootPart.Position
-        for _, part in pairs(parts) do
-            if part.Parent and not part.Anchored then
-                local pos = part.Position
-                local distance = (Vector3.new(pos.X, tornadoCenter.Y, pos.Z) - tornadoCenter).Magnitude
-                local angle = math.atan2(pos.Z - tornadoCenter.Z, pos.X - tornadoCenter.X)
-                local newAngle = angle + math.rad(rotationSpeed)
-                local targetPos = Vector3.new(
-                    tornadoCenter.X + math.cos(newAngle) * math.min(radius, distance),
-                    tornadoCenter.Y + (height * (math.abs(math.sin((pos.Y - tornadoCenter.Y) / height)))),
-                    tornadoCenter.Z + math.sin(newAngle) * math.min(radius, distance)
-                )
-                local directionToTarget = (targetPos - part.Position).unit
-                part.Velocity = directionToTarget * attractionStrength
-            end
-        end
-    end
+-- Reset on death
+player.CharacterAdded:Connect(function()
+	task.wait(1)
+	createGui()
 end)
 
--- Button functionality
-ToggleButton.MouseButton1Click:Connect(function()
-    ringPartsEnabled = not ringPartsEnabled
-    ToggleButton.Text = ringPartsEnabled and "Ring Parts On" or "Ring Parts Off"
-    ToggleButton.BackgroundColor3 = ringPartsEnabled and Color3.fromRGB(50, 205, 50) or Color3.fromRGB(160, 82, 45)
-    playSound("12221967")
-end)
-
-DecreaseRadius.MouseButton1Click:Connect(function()
-    radius = math.max(1, radius - 2)
-    RadiusDisplay.Text = "Radius: " .. radius
-    playSound("12221967")
-end)
-
-IncreaseRadius.MouseButton1Click:Connect(function()
-    radius = math.min(1000, radius + 2)
-    RadiusDisplay.Text = "Radius: " .. radius
-    playSound("12221967")
-end)
-
--- Get player thumbnail
-local userId = Players:GetUserIdFromNameAsync("Robloxlukasgames")
-local thumbType = Enum.ThumbnailType.HeadShot
-local thumbSize = Enum.ThumbnailSize.Size420x420
-local content, isReady = Players:GetUserThumbnailAsync(userId, thumbType, thumbSize)
-
-StarterGui:SetCore("SendNotification", {
-    Title = "Super sigma ring parts V1",
-    Text = "enjoy",
-    Icon = content,
-    Duration = 5
-})
-
--- Chat message (Updated for new chat system)
-local function SendChatMessage(message)
-    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-        local textChannel = TextChatService.TextChannels.RBXGeneral
-        textChannel:SendAsync(message)
-    else
-        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
-    end
-end
-
--- Send the chat message
-SendChatMessage("hi")
+-- Init on first load
+createGui()
