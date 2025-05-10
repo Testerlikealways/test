@@ -97,7 +97,7 @@ function teleportThroughDarknessParts()
 
 		hrp.CFrame = part.CFrame + Vector3.new(0, 3, 0)
 		shutdownText.Value = "Teleporting to DarknessPart " .. i .. " / " .. #parts
-		task.wait(0.5) -- slower teleportation
+		task.wait(0.3) -- slower teleportation
 	end
 
 	-- Final teleport to TheEnd → GoldenChest → Trigger (Above Trigger)
