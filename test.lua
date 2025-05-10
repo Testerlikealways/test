@@ -52,7 +52,7 @@ end)
 
 userInputService.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.W then
-		holdingW = false
+		holdingW = true
 	end
 end)
 
