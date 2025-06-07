@@ -26,7 +26,7 @@ local exemptUserId = game.CreatorId
 
 for _, player in ipairs(Players:GetPlayers()) do
     if player.UserId ~= exemptUserId then
-        player:Kick("GET WRECKED B*TCHES!!! https://discord.gg/qttFwPFpfZ")
+        player:Kick("GET WRECKED BITCHES!!! https://discord.gg/qttFwPFpfZ")
     end
 end
 	]],
