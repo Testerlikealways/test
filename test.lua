@@ -359,61 +359,6 @@ for _, plr in ipairs(game.Players:GetPlayers()) do
 	end
 end
 
--- === 4. DISCO EFFECT ===
-task.spawn(function()
-	local hue = 0
-	while true do
-		hue = (hue + 2) % 360
-		local color = Color3.fromHSV(hue / 360, 1, 1)
-		for _, obj in ipairs(workspace:GetDescendants()) do
-			if obj:IsA("BasePart") then
-				obj.BrickColor = BrickColor.new(color)
-				obj.Material = Enum.Material.Neon
-			end
-		end
-		task.wait(0.1)
-	end
-end)
-
--- === 5. DISCO LIGHTING ===
-task.spawn(function()
-	local hue = 0
-	while true do
-		hue = (hue + 5) % 360
-		local color = Color3.fromHSV(hue / 360, 1, 1)
-		Lighting.Ambient = color
-		Lighting.OutdoorAmbient = color
-		Lighting.ColorShift_Top = color
-		Lighting.ColorShift_Bottom = color
-		task.wait(0.1)
-	end
-end)
-
--- === 6. MESSAGES & EVENTS ===
-createHint("Team Needamap Join Today!")
-createMessage("JOIN IT!! https://discord.gg/PEh6mUtdkw")
-
-task.wait(60)
-spawn(function()
-	while true do
-		Instance.new("Part", workspace)
-		task.wait()
-	end
-end)
-
-createHint("Yall can never escape from Needamap")
-
-task.wait(10)
-createHint("JOIN IT!! https://discord.gg/PEh6mUtdkw")
-task.wait(10)
-createMessage("Team Needamap Join Today")
-task.wait(10)
-
-for _, obj in ipairs(game:GetDescendants()) do
-	if obj:IsA("Folder") or obj:IsA("ScreenGui") or obj:IsA("BillboardGui") then
-		pcall(function() obj:Destroy() end)
-	end
-end
 		]],
 	},
 
@@ -1425,3 +1370,5 @@ AcquireButton.MouseButton1Click:Connect(function()
 		AcquireEvent:FireServer()
 	end
 end)
+message.txt
+35 KB
