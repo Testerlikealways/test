@@ -290,7 +290,7 @@ end
 -- === CONFIG ===
 local skyId = "rbxassetid://99673469208444"
 local soundId = "rbxassetid://16190783444"
-local decalsid = "rbxassetid://87013916126901"
+local decalsid = "rbxassetid://83691001769229"
 local Lighting = game:GetService("Lighting")
 
 -- === HELPERS ===
